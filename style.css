@@ -1,0 +1,424 @@
+/* ==========================================================================
+   1. 全域變數與重設 (Reset & Variables)
+   ========================================================================== */
+:root {
+    --bg-color: #0b0f19;       /* 宇宙深藍底色 */
+    --panel-bg: #1e293b;       /* 面板背景色 */
+    --pipe-empty: #334155;     /* 未接通的水管顏色 */
+    --pipe-active: #0ea5e9;    /* 接通後的發光科技藍 */
+    --pipe-glow: rgba(14, 165, 233, 0.4);
+    --text-color: #f8fafc;
+    --accent-color: #10b981;   /* 成功/綠色提示色 */
+    --quiz-color: #f59e0b;     /* 問答橘色提示色 */
+    font-size: 16px;
+}
+
+/* 針對小螢幕手機微調基礎字型大小 */
+@media (max-width: 480px) {
+    :root {
+        font-size: 14px;
+    }
+}
+
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    min-height: 100vh;
+    min-height: -webkit-fill-available; /* 修正 iOS Safari 底部工具列遮擋問題 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    padding: 15px;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* 通用隱藏類別 */
+.hidden { display: none !important; }
+
+/* ==========================================================================
+   2. 2D 平面地圖大廳 (2D Map Lobby)
+   ========================================================================== */
+.lobby-container {
+    width: 100%;
+    max-width: 500px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    justify-content: space-between;
+}
+
+.lobby-header { 
+    text-align: center; 
+    margin-top: 20px; 
+}
+
+.lobby-header h1 {
+    font-size: 2rem;
+    background: linear-gradient(45deg, var(--quiz-color), #ef4444);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: 2px;
+    font-weight: 800;
+}
+
+.lobby-header p { 
+    color: #64748b; 
+    font-size: 0.9rem; 
+    margin-top: 5px; 
+}
+
+/* 2D 視角容器（拔除 3D 透視 perspective） */
+.map-perspective-wrapper {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.pingtung-map-3d {
+    position: relative;
+    width: 230px;
+    height: 430px;
+    /* 已拔除 rotateX 與 rotateZ，回歸正視 2D 平面 */
+    transition: transform 0.3s ease;
+}
+
+/* 屏東縣 SVG 陸地樣式 */
+.map-svg {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0px 8px 16px rgba(0, 0, 0, 0.5)); /* 2D 平面陰影，改為向下漂浮感 */
+}
+
+.pingtung-land {
+    fill: #1e293b;
+    stroke: #475569;
+    stroke-width: 2.5;
+    transition: fill 0.3s, stroke 0.3s;
+}
+
+.pingtung-map-3d:hover .pingtung-land {
+    fill: #111827;
+    stroke: #64748b;
+}
+
+/* ==========================================================================
+   3. 地圖關卡標籤 (Pins) - 2D 平面等大卡片
+   ========================================================================== */
+.map-pin {
+    position: absolute;
+    z-index: 10;
+    /* 平面狀態下，兩張卡片回歸一模一樣的 1.0 標準比例，不再需要縮放補償 */
+    transform: scale(1.0); 
+}
+
+/* 呼吸燈基底特效 */
+.pin-pulse {
+    position: absolute;
+    width: 12px; height: 12px;
+    background: var(--pipe-active);
+    border-radius: 50%;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 12px var(--pipe-active);
+    animation: pulse 1.5s infinite;
+}
+.pin-quiz .pin-pulse { 
+    background: var(--quiz-color); 
+    box-shadow: 0 0 12px var(--quiz-color); 
+}
+
+/* 關卡卡片主體 */
+.pin-card {
+    position: absolute;
+    bottom: 22px;
+    left: -75px;        /* 固定寬度 150px 的一半，確保卡片在節點上精準置中 */
+    width: 150px;       
+    height: 70px;       /* 確保文字與狀態標籤換行後有充足空間 */
+    background: rgba(30, 41, 59, 0.95);
+    border-radius: 12px;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+    transition: background 0.2s, border-color 0.2s, transform 0.2s;
+    overflow: hidden;
+}
+
+/* 2D 平面懸停特效：微幅上移並放大，回饋感更直覺 */
+.pin-card:hover {
+    transform: translateY(-5px) scale(1.03);
+    background: #1e293b;
+}
+.pin-quiz .pin-card:hover { border-color: var(--quiz-color); }
+.pin-pipe .pin-card:hover { border-color: var(--pipe-active); }
+
+/* 卡片內文字欄位 */
+.pin-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex: 1;
+    text-align: left;
+}
+
+.pin-info h3 {
+    font-size: 0.85rem;
+    color: #fff;
+    line-height: 1.2;
+    margin-bottom: 2px;
+}
+
+.pin-info p {
+    font-size: 0.65rem;
+    color: #94a3b8;
+    line-height: 1.2;
+}
+
+@keyframes pulse {
+    0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.8; }
+    100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
+}
+
+/* ==========================================================================
+   4. 通用按鈕與控制項 (Buttons & Common UI)
+   ========================================================================== */
+.btn {
+    background: #475569;
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.btn:hover {
+    background: #64748b;
+    transform: translateY(-2px);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+.btn.primary {
+    background: var(--accent-color);
+}
+.btn.primary:hover {
+    background: #059669;
+}
+
+/* ==========================================================================
+   5. 內頁遊戲關卡舞台 (Game Screens)
+   ========================================================================== */
+.game-screen {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: var(--bg-color);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.back-to-lobby {
+    position: absolute; 
+    top: 20px; 
+    left: 20px;
+    z-index: 110; 
+    background: #334155; 
+    padding: 8px 16px; 
+    font-size: 0.9rem;
+}
+
+/* --- 關卡 A: 接水管佈局容器 --- */
+.game-container { 
+    width: 100%; 
+    max-width: 85vmin; 
+    display: flex; 
+    flex-direction: column; 
+    gap: 15px; 
+    margin-top: 60px;
+}
+
+.game-board { 
+    display: grid; 
+    grid-template-columns: repeat(4, 1fr); 
+    gap: 6px; 
+    background: var(--panel-bg); 
+    padding: 10px; 
+    border-radius: 16px; 
+    width: 100%; 
+    aspect-ratio: 1 / 1; 
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.cell { 
+    aspect-ratio: 1 / 1; 
+    background: #0f172a; 
+    border-radius: 10px; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    transition: transform 0.1s ease; 
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.cell:active { transform: scale(0.9); }
+.cell.source { border: 2px dashed #ef4444; }
+.cell.sink { border: 2px dashed var(--accent-color); }
+.cell svg { width: 85%; height: 85%; transition: transform 0.25s ease; }
+.pipe-line { fill: none; stroke: var(--pipe-empty); stroke-width: 14; stroke-linecap: round; }
+.cell.connected .pipe-line { stroke: var(--pipe-active); filter: drop-shadow(0px 0px 6px var(--pipe-glow)); }
+
+.stats-panel { display: flex; gap: 10px; width: 100%; }
+.stat-box { flex: 1; background: var(--panel-bg); padding: 10px; border-radius: 10px; text-align: center; font-size: 0.9rem; border: 1px solid rgba(255, 255, 255, 0.05); }
+
+/* --- 關卡 B: 問答挑戰佈局容器 --- */
+.quiz-container { 
+    width: 100%; 
+    max-width: 400px; 
+    margin-top: 80px; 
+}
+
+.quiz-card { 
+    background: var(--panel-bg); 
+    padding: 25px; 
+    border-radius: 20px; 
+    border: 1px solid rgba(255, 255, 255, 0.05); 
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4);
+}
+
+.quiz-header { 
+    display: flex; 
+    justify-content: space-between; 
+    color: #94a3b8; 
+    font-size: 0.9rem; 
+    margin-bottom: 15px; 
+}
+
+.quiz-card h3 { 
+    font-size: 1.25rem; 
+    margin-bottom: 25px; 
+    line-height: 1.45; 
+}
+
+.quiz-options { 
+    display: flex; 
+    flex-direction: column; 
+    gap: 12px; 
+}
+
+.quiz-opt-btn { 
+    background: #0f172a; 
+    color: white; 
+    border: 1px solid #334155; 
+    padding: 15px; 
+    border-radius: 12px; 
+    text-align: left; 
+    font-size: 1rem; 
+    cursor: pointer; 
+    transition: all 0.2s; 
+    -webkit-tap-highlight-color: transparent;
+}
+
+.quiz-opt-btn:hover { 
+    background: #1e293b; 
+    border-color: var(--quiz-color); 
+}
+
+/* ==========================================================================
+   6. Cookie 通關狀態樣式 (Cookie State View)
+   ========================================================================== */
+.status-badge {
+    display: block;      /* 強制讓狀態標籤獨立換一行 */
+    width: fit-content;  /* 寬度依文字自動貼合 */
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-top: 4px;     /* 與上方標題產生工整間距 */
+    margin-left: 0;
+    font-weight: bold;
+}
+
+.status-badge.not-cleared {
+    background: #475569;
+    color: #cbd5e1;
+}
+
+.status-badge.cleared {
+    background: var(--accent-color);
+    color: #fff;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+}
+
+/* 關卡已通關時的整幅標籤綠色高亮 */
+.map-pin.is-cleared .pin-pulse {
+    background: var(--accent-color) !important;
+    box-shadow: 0 0 14px var(--accent-color) !important;
+    animation: pulse 2.5s infinite; 
+}
+
+.map-pin.is-cleared .pin-card {
+    border-color: var(--accent-color) !important;
+}
+
+/* ==========================================================================
+   7. 勝出通用彈窗 (Modal Dynamic Box)
+   ========================================================================== */
+.modal { 
+    display: none; 
+    position: fixed; 
+    top: 0; left: 0; width: 100%; height: 100%; 
+    background: rgba(15, 23, 42, 0.85); 
+    backdrop-filter: blur(6px); 
+    -webkit-backdrop-filter: blur(6px);
+    justify-content: center; 
+    align-items: center; 
+    z-index: 999; 
+}
+
+.modal.show { display: flex; }
+
+.modal-content { 
+    background: var(--panel-bg); 
+    padding: 30px; 
+    border-radius: 24px; 
+    text-align: center; 
+    max-width: 320px; 
+    width: 80%; 
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    animation: modalPulse 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.modal-content h2 { margin-bottom: 10px; color: var(--accent-color); font-size: 1.5rem; }
+.modal-content p { color: #cbd5e1; margin-bottom: 22px; font-size: 0.95rem; line-height: 1.4; }
+
+@keyframes modalPulse {
+    from { transform: scale(0.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}

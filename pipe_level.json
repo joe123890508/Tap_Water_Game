@@ -1,0 +1,21 @@
+[
+  { "row": 0, "col": 0, "type": "I", "rotation": 1, "isSource": true },
+  { "row": 0, "col": 1, "type": "L", "rotation": 2 },
+  { "row": 0, "col": 2, "type": "I", "rotation": 0 },
+  { "row": 0, "col": 3, "type": "L", "rotation": 1 },
+  
+  { "row": 1, "col": 0, "type": "L", "rotation": 0 },
+  { "row": 1, "col": 1, "type": "T", "rotation": 3 },
+  { "row": 1, "col": 2, "type": "L", "rotation": 2 },
+  { "row": 1, "col": 3, "type": "I", "rotation": 1 },
+  
+  { "row": 2, "col": 0, "type": "I", "rotation": 0 },
+  { "row": 2, "col": 1, "type": "I", "rotation": 1 },
+  { "row": 2, "col": 2, "type": "T", "rotation": 1 },
+  { "row": 2, "col": 3, "type": "L", "rotation": 3 },
+  
+  { "row": 3, "col": 0, "type": "L", "rotation": 0 },
+  { "row": 3, "col": 1, "type": "I", "rotation": 1 },
+  { "row": 3, "col": 2, "type": "I", "rotation": 0 },
+  { "row": 3, "col": 3, "type": "I", "rotation": 0, "isSink": true }
+]
