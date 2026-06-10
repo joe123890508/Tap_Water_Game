@@ -422,3 +422,50 @@ body {
     from { transform: scale(0.8); opacity: 0; }
     to { transform: scale(1); opacity: 1; }
 }
+
+/* --- 新增：「立即申請」按鈕包裹器與樣式 --- */
+.apply-btn-wrapper {
+    display: flex;
+    justify-content: center;  /* 確保按鈕水平置中 */
+    align-items: center;
+    width: 100%;
+    margin-bottom: 14px;      /* 與下方的"傲視群雄"按鈕保持工整間距 */
+}
+
+.apply-btn {
+    background: linear-gradient(135deg, #06b6d4, #10b981); /* 亮眼青綠漸層 */
+    color: #ffffff !important;
+    font-weight: 700;
+    font-size: 1.1rem;
+    padding: 12px 40px;       /* 左右加寬，讓視覺焦點更集中 */
+    border-radius: 50px;      /* 膠囊形狀圓角，增加層次感 */
+    text-decoration: none;    /* 移除超連結底線 */
+    width: 100%;              /* 寬度與金色按鈕一致（若想改為小按鈕，可改為 width: auto） */
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.apply-btn:hover {
+    background: linear-gradient(135deg, #22d3ee, #34d399);
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 0 25px rgba(34, 211, 238, 0.6);
+}
+
+.apply-btn:active {
+    transform: translateY(-1px);
+}
+
+/* 微調原本的金色按鈕，讓兩個按鈕疊放時視覺更和諧 */
+.gold-btn {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #94a3b8;
+    font-size: 0.85rem;
+    padding: 8px 20px;
+    margin-top: 5px;
+}
+.gold-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+    transform: none; /* 減弱次要按鈕的動態，突顯立即申請 */
+}

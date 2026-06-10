@@ -13,8 +13,9 @@
 // ==========================================================================
 // 1. 全域狀態與 Cookie 操作輔助函式
 // ==========================================================================
-function setCookie(name, value, days = 30) {
-    const maxAge = days * 24 * 60 * 60;
+function setCookie(name, value, days = 1) { // 預設值天數改為 1
+    const maxAge = days * 24 * 60 * 60;     // 計算出來會是 86400 秒
+    // 使用 SameSite=Strict 與 Secure 確保現代瀏覽器安全性
     document.cookie = `${name}=${value}; max-age=${maxAge}; path=/; SameSite=Strict`;
 }
 
@@ -125,8 +126,9 @@ async function loadAndRenderMap() {
 function updateLobbyStatus() {
     const isPipeCleared = getCookie('pipe_cleared') === 'true';
     const isQuizCleared = getCookie('quiz_cleared') === 'true';
+    const isRewarded = getCookie('all_clear_rewarded') === 'true';
 
-    // 更新接水管關卡 UI
+    // 1. 更新接水管關卡 UI (這部分程式碼與之前相同)
     const pipeNode = document.getElementById('pin-pipe-node');
     const pipeBadge = document.getElementById('badge-pipe');
     const pipeDesc = document.getElementById('desc-pipe');
@@ -134,15 +136,15 @@ function updateLobbyStatus() {
         pipeNode.classList.add('is-cleared');
         pipeBadge.textContent = '✓ 已通關';
         pipeBadge.className = 'status-badge cleared';
-        pipeDesc.textContent = '接管率升高了！';
+        pipeDesc.textContent = '管線已經鋪設完成！';
     } else {
         pipeNode.classList.remove('is-cleared');
         pipeBadge.textContent = '未挑戰';
         pipeBadge.className = 'status-badge not-cleared';
-        pipeDesc.textContent = '化身水利超人，提升接管率';
+        pipeDesc.textContent = '幫忙完成自來水延管';
     }
 
-    // 更新問答關卡 UI
+    // 2. 更新問答關卡 UI (這部分程式碼與之前相同)
     const quizNode = document.getElementById('pin-quiz-node');
     const quizBadge = document.getElementById('badge-quiz');
     const quizDesc = document.getElementById('desc-quiz');
@@ -150,12 +152,21 @@ function updateLobbyStatus() {
         quizNode.classList.add('is-cleared');
         quizBadge.textContent = '✓ 已通關';
         quizBadge.className = 'status-badge cleared';
-        quizDesc.textContent = '你已經是自來水小神通了！';
+        quizDesc.textContent = '你是自來水小達人！';
     } else {
         quizNode.classList.remove('is-cleared');
         quizBadge.textContent = '未挑戰';
         quizBadge.className = 'status-badge not-cleared';
-        quizDesc.textContent = '解鎖自來水相關知識';
+        quizDesc.textContent = '挑戰自來水小知識';
+    }
+
+    // 3. 終極全通關判定：只要兩關都過了，每次進大廳或重整網頁都直接彈出
+    if (isPipeCleared && isQuizCleared) {
+        // 如果是網頁剛載入（重整），直接彈出不延遲；如果是剛破關，維持微延遲營造儀式感
+        const delay = document.getElementById('all-clear-modal')?.classList.contains('show') ? 0 : 400;
+        setTimeout(() => {
+            triggerAllClearModal();
+        }, delay);
     }
 }
 
@@ -272,7 +283,7 @@ function updateWaterFlow() {
 
 
 // ==========================================================================
-// 4. 關卡 B：屏東知識問答挑戰模組 (總題數自動判斷版)
+// 4. 關卡 B：自來水知識問答挑戰模組
 // ==========================================================================
 let cachedQuizData = null;
 let currentQuestionIndex = 0;
@@ -328,7 +339,7 @@ function handleQuizAnswer(selectedIndex, quizList) {
             showQuestion(quizList);
         } else {
             setCookie('quiz_cleared', 'true', 30);
-            triggerWinModal(`恭喜你！完美答對全部 ${quizList.length} 道屏東知識問題！`);
+            triggerWinModal(`恭喜你！完美答對全部 ${quizList.length} 道自來水知識問題！`);
         }
     } else {
         if (navigator.vibrate) navigator.vibrate(200); 
@@ -357,3 +368,18 @@ window.onload = async () => {
     await loadAndRenderMap(); // 1. 先異步非同步抓取並繪製屏東地圖
     updateLobbyStatus();      // 2. 隨後檢查 Cookie 進度更新大廳關卡徽章
 };
+
+/**
+ * 觸發全通關終極畫面
+ */
+function triggerAllClearModal() {
+    // 震動回饋：長、短、長 的勝利交響樂節奏
+    if (navigator.vibrate) {
+        navigator.vibrate([300, 100, 100, 100, 300]);
+    }
+    document.getElementById('all-clear-modal').classList.add('show');
+}
+// 監聽終極關閉按鈕
+document.getElementById('all-clear-close-btn').addEventListener('click', () => {
+    document.getElementById('all-clear-modal').classList.remove('show');
+});
