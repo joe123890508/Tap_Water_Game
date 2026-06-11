@@ -18,20 +18,17 @@ function setCookie(name, value, days = 1) { // 預設值天數改為 1
     // 使用 SameSite=Strict 與 Secure 確保現代瀏覽器安全性
     document.cookie = `${name}=${value}; max-age=${maxAge}; path=/; SameSite=Strict`;
 }
-
 function getCookie(name) {
     const value = `; ${document.cookie}`;
     const parts = value.split(`; ${name}=`);
     if (parts.length === 2) return parts.pop().split(';').shift();
     return null;
 }
-
 const screens = {
     lobby: document.getElementById('lobby-screen'),
     pipe: document.getElementById('game-pipe-screen'),
     quiz: document.getElementById('game-quiz-screen')
 };
-
 function switchScreen(screenName) {
     Object.values(screens).forEach(s => s.classList.add('hidden'));
     screens[screenName].classList.remove('hidden');
@@ -41,7 +38,6 @@ function switchScreen(screenName) {
         updateLobbyStatus();
     }
 }
-
 // 綁定各關卡的返回大廳按鈕與進入按鈕
 document.querySelectorAll('.back-to-lobby').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -49,77 +45,61 @@ document.querySelectorAll('.back-to-lobby').forEach(btn => {
         switchScreen('lobby');
     });
 });
-
 document.getElementById('btn-goto-pipe').addEventListener('click', () => {
     switchScreen('pipe');
     startPipeGameFlow();
 });
-
 document.getElementById('btn-goto-quiz').addEventListener('click', () => {
     switchScreen('quiz');
     startQuizGameFlow();
 });
 
-
 // ==========================================================================
 // 2. 核心大廳控制：GeoJSON 渲染與通關狀態刷新
 // ==========================================================================
-
 /**
  * 讀取並動態將 GeoJSON 座標渲染成 2D 畫布 SVG Path
  */
 async function loadAndRenderMap() {
     const svgEl = document.getElementById('pingtung-svg');
     if (!svgEl) return;
-
     try {
         const response = await fetch('pingtung.json');
         if (!response.ok) throw new Error('無法讀取地圖 GeoJSON 檔案');
         const geoData = await response.json();
-
         // 取得屏東縣的幾何座標點陣列 (多邊形外框)
         const coordinates = geoData.features[0].geometry.coordinates[0];
-
         // 1. 找出經緯度的邊界值 (Bounding Box)，用於做視窗對齊映射
         const lons = coordinates.map(c => c[0]);
         const lats = coordinates.map(c => c[1]);
         const minLon = Math.min(...lons), maxLon = Math.max(...lons);
         const minLat = Math.min(...lats), maxLat = Math.max(...lats);
-
         // SVG 畫布設定的標準寬高 (對應 HTML viewBox="0 0 200 400")
         const svgWidth = 200;
         const svgHeight = 400;
         const padding = 20; // 留安全間距防破版
-
         // 2. 等比區間映射公式：經緯度 -> 畫布 X/Y 像素坐標
         const points = coordinates.map(coord => {
             const lon = coord[0];
             const lat = coord[1];
-
             // 經度對應 X 軸
             const x = padding + ((lon - minLon) / (maxLon - minLon)) * (svgWidth - padding * 2);
             // 緯度對應 Y 軸 (注意：網頁座標向下為正，地理座標向上為正，因此需要進行翻轉映射)
             const y = padding + (1 - (lat - minLat) / (maxLat - minLat)) * (svgHeight - padding * 2);
-            
             return `${x},${y}`;
         });
-
         // 3. 拼接 SVG Path Data 指令 (M=起點, L=連線, Z=關閉圖形)
         const pathData = `M ${points.join(' L ')} Z`;
-
         // 4. 動態生成 SVG 元素節點並注入
         const pathEl = document.createElementNS("http://www.w3.org/2000/svg", "path");
         pathEl.setAttribute("d", pathData);
         pathEl.setAttribute("class", "pingtung-land");
-        
         svgEl.appendChild(pathEl);
-
     } catch (error) {
         console.error("地圖載入失敗:", error);
         svgEl.innerHTML = `<text x="30" y="200" fill="#ef4444" font-size="12">圖資載入失敗，請檢查本地伺服器環境</text>`;
     }
 }
-
 /**
  * 讀取 Cookie 狀態，動態渲染首頁通關情形
  */
@@ -127,7 +107,14 @@ function updateLobbyStatus() {
     const isPipeCleared = getCookie('pipe_cleared') === 'true';
     const isQuizCleared = getCookie('quiz_cleared') === 'true';
     const isRewarded = getCookie('all_clear_rewarded') === 'true';
-
+    // 【新增】新玩家引導判定：如果兩關都還沒通關
+    const welcomeOverlay = document.getElementById('welcome-overlay');
+    if (!isPipeCleared && !isQuizCleared) {
+        welcomeOverlay?.classList.remove('hidden');
+    } else {
+        welcomeOverlay?.classList.add('hidden'); // 只要過任一關，就永久隱藏引導層
+    }
+    
     // 1. 更新接水管關卡 UI (這部分程式碼與之前相同)
     const pipeNode = document.getElementById('pin-pipe-node');
     const pipeBadge = document.getElementById('badge-pipe');
@@ -169,7 +156,17 @@ function updateLobbyStatus() {
         }, delay);
     }
 }
-
+document.addEventListener('DOMContentLoaded', () => {
+    // 【點擊開始闖關】 -> 加上 hidden 類別來隱藏歡迎畫面
+    document.getElementById('btn-start-game')?.addEventListener('click', () => {
+        document.getElementById('welcome-overlay')?.classList.add('hidden');
+        if (navigator.vibrate) navigator.vibrate(20); // 加上震動回饋
+    });
+    // 【點擊活動辦法】 -> 跳出說明
+    document.getElementById('btn-show-rules')?.addEventListener('click', () => {
+        alert("【活動辦法】\n1. 點擊地圖上的關卡卡片進入挑戰。\n2. 關卡 A 需成功串接水管，關卡 B 需答對所有自來水知識題。\n3. 2025@115年水利人員基礎班第5組");
+    });
+});
 
 // ==========================================================================
 // 3. 關卡 A：接水管小遊戲模組
@@ -281,17 +278,14 @@ function updateWaterFlow() {
     }
 }
 
-
 // ==========================================================================
 // 4. 關卡 B：自來水知識問答挑戰模組
 // ==========================================================================
 let cachedQuizData = null;
 let currentQuestionIndex = 0;
-
 async function startQuizGameFlow() {
     document.getElementById('quiz-question').textContent = "題目讀取中...";
     document.getElementById('quiz-options').innerHTML = '';
-
     try {
         if (!cachedQuizData) {
             const response = await fetch('quiz_data.json');
@@ -305,20 +299,16 @@ async function startQuizGameFlow() {
         document.getElementById('quiz-question').textContent = "題庫加載失敗。";
     }
 }
-
 function showQuestion(quizList) {
     // 1. 動態更新進度面板：當前題號 與 自動判斷的總題數
     document.getElementById('quiz-current').textContent = currentQuestionIndex + 1;
     document.getElementById('quiz-total').textContent = quizList.length; // 自動判斷總題數！
-    
     // 2. 渲染題目
     const data = quizList[currentQuestionIndex];
     document.getElementById('quiz-question').textContent = data.q;
-    
     // 3. 渲染選項
     const optionsContainer = document.getElementById('quiz-options');
     optionsContainer.innerHTML = '';
-    
     data.o.forEach((option, idx) => {
         const btn = document.createElement('button');
         btn.classList.add('quiz-opt-btn');
@@ -327,12 +317,10 @@ function showQuestion(quizList) {
         optionsContainer.appendChild(btn);
     });
 }
-
 function handleQuizAnswer(selectedIndex, quizList) {
     const data = quizList[currentQuestionIndex];
     if (selectedIndex === data.a) {
         if (navigator.vibrate) navigator.vibrate([40, 40]);
-        
         currentQuestionIndex++;
         // 4. 這裡的判斷也自動化了：只要當前索引小於題庫長度，就繼續下一題
         if (currentQuestionIndex < quizList.length) {
@@ -346,7 +334,6 @@ function handleQuizAnswer(selectedIndex, quizList) {
         alert("答案不對唷，再試一次！");
     }
 }
-
 // ==========================================================================
 // 5. 全局彈窗控制與應用程式啟動入口
 // ==========================================================================
@@ -355,12 +342,10 @@ function triggerWinModal(text) {
     document.getElementById('win-modal-text').textContent = text;
     document.getElementById('win-modal').classList.add('show');
 }
-
 document.getElementById('modal-close-btn').addEventListener('click', () => {
     document.getElementById('win-modal').classList.remove('show');
     switchScreen('lobby'); // 路由彈回大廳，會同步觸發 updateLobbyStatus() 刷新首頁
 });
-
 /**
  * 網頁完全載入初始化入口
  */
@@ -368,7 +353,6 @@ window.onload = async () => {
     await loadAndRenderMap(); // 1. 先異步非同步抓取並繪製屏東地圖
     updateLobbyStatus();      // 2. 隨後檢查 Cookie 進度更新大廳關卡徽章
 };
-
 /**
  * 觸發全通關終極畫面
  */
@@ -379,7 +363,7 @@ function triggerAllClearModal() {
     }
     document.getElementById('all-clear-modal').classList.add('show');
 }
-// 監聽終極關閉按鈕
+// 關閉按鈕
 document.getElementById('all-clear-close-btn').addEventListener('click', () => {
     document.getElementById('all-clear-modal').classList.remove('show');
 });

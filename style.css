@@ -41,7 +41,7 @@ body {
 }
 
 /* 通用隱藏類別 */
-.hidden { display: none !important; }
+.hidden {display: none !important;}
 
 /* ==========================================================================
    2. 2D 平面地圖大廳 (2D Map Lobby)
@@ -468,4 +468,84 @@ body {
     background: rgba(255, 255, 255, 0.05);
     color: #fff;
     transform: none; /* 減弱次要按鈕的動態，突顯立即申請 */
+}
+/* ==========================================================================
+   8. 新玩家引導遮罩樣式 (Welcome Overlay & Guide)
+   ========================================================================== */
+.welcome-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    height: 100dvh;
+    background: rgba(11, 15, 25, 0.96); /* 極深藍底色，近乎全遮蔽大廳 */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: 500; /* 介於大廳與遊戲內頁之間 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+.welcome-content {
+    text-align: center;
+    max-width: 360px;
+    width: 100%;
+    animation: modalPulse 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.welcome-logo {
+    font-size: 4rem;
+    margin-bottom: 15px;
+    filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.5));
+}
+.welcome-content h2 {
+    font-size: 1.6rem;
+    font-weight: 800;
+    margin-bottom: 12px;
+    background: linear-gradient(45deg, #38bdf8, #10b981);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.welcome-text {
+    color: #94a3b8;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin-bottom: 30px;
+}
+/* 按鈕配置 */
+.welcome-btn-zone {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    align-items: center; /* 水平居中 */
+}
+/* 主要：開始闖關按鈕 */
+.primary-welcome-btn {
+    background: linear-gradient(135deg, #3b82f6, #0ea5e9);
+    color: white;
+    font-weight: 700;
+    font-size: 1.1rem;
+    padding: 14px 0;
+    border-radius: 12px;
+    width: 100%; /* 撐滿寬度，好點擊 */
+    box-shadow: 0 4px 15px rgba(14, 165, 233, 0.4);
+}
+.primary-welcome-btn:hover {
+    background: linear-gradient(135deg, #60a5fa, #38bdf8);
+    transform: translateY(-2px);
+}
+/* 次要：活動辦法按鈕 */
+.rules-btn {
+    background: #1e293b;
+    color: #cbd5e1;
+    border: 1px solid #334155;
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 12px 0;
+    border-radius: 12px;
+    width: 100%;
+}
+.rules-btn:hover {
+    background: #334155;
+    color: white;
 }
