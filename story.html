@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>屏東水資源韌性轉型紀錄與普及率展示系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/TextPlugin.min.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* ========================================== */
+        /* 背景檔案 原有專屬樣式                       */
+        /* ========================================== */
+        html { scroll-behavior: smooth; }
+        .scroll-section { position: relative; min-height: 100vh; }
+        .step-text { transition: all 0.5s ease; }
+
+        /* SVG 圓點專用呼吸閃爍動畫 */
+        @keyframes svg-pulse-glow {
+            0%, 100% { opacity: 0.6; stroke-width: 0px; }
+            50% { opacity: 1; stroke-width: 4px; }
+        }
+        .pulse-node {
+            animation: svg-pulse-glow 2s infinite ease-in-out;
+            stroke: rgba(255, 255, 255, 0.4);
+        }
+        
+        /* 確保連續 Pin 區塊的網頁流佈局平滑穩定 */
+        .section-block {
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* ========================================== */
+        /* 問題討論檔案 原有專專屬樣式                 */
+        /* ========================================== */
+        .an {
+            opacity: 0;
+            transform: translateY(15px);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .an.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .glow-red {
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.2);
+        }
+
+        :root {
+            --f4-bg-color: #0d1117;
+            --f4-card-bg: #161b22;
+            --f4-text-main: #ffffff;
+            --f4-text-sub: #8b949e;
+            --f4-border-color: #30363d;
+            
+            /* 檔案四 專屬變數 */
+            --color-bg-dark: #070d19;
+            --color-border-blue: #1e3a6a;
+            --color-water-ai: #38bdf8;
+            --color-water-concept: #22d3ee;
+        }
+
+        .fullscreen-section {
+            width: 100%;
+            height: 100vh;
+            padding: 2.5vh 2vw;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 2vh;
+            background-color: var(--f4-bg-color);
+            color: var(--f4-text-main);
+        }
+
+        .fullscreen-section header {
+            text-align: center;
+        }
+
+        .fullscreen-section header h1 {
+            font-size: 1.6rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            background: linear-gradient(45deg, #a8ff78, #78ffd6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .main-diagram-container {
+            background-color: var(--f4-card-bg);
+            border-radius: 12px;
+            padding: 1vh;
+            border: 1px solid var(--f4-border-color);
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .main-diagram {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .features-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5vw;
+            height: 28vh;
+            min-height: 150px;
+        }
+
+        .feature-card {
+            background-color: var(--f4-card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--f4-border-color);
+            display: flex;
+            flex-direction: column;
+            transition: border-color 0.3s;
+        }
+
+        .feature-card:hover {
+            border-color: #58a6ff;
+        }
+
+        .card-svg-wrapper {
+            width: 100%;
+            height: 40%;
+            background: #1f242c;
+        }
+
+        .card-svg-wrapper svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .card-info {
+            padding: 0.6rem 0.8rem;
+            text-align: center;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .card-title {
+            font-size: 1rem;
+            font-weight: bold;
+            margin-bottom: 0.2rem;
+        }
+
+        .title-blue { color: #58a6ff; }
+        .title-red { color: #ff7b72; }
+        .title-orange { color: #ffa657; }
+
+        .card-desc {
+            font-size: 0.75rem;
+            color: var(--f4-text-sub);
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        #section4 header, 
+        #section4 .main-diagram-container, 
+        #section4 .feature-card {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        .theater-card {
+            position: absolute;
+            width: 100%;
+            max-width: 400px;
+            opacity: 0;
+            transform: translateY(100vh);
+            visibility: hidden;
+            background: rgba(18, 30, 49, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), inset 0 0 20px rgba(56, 189, 248, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans antialiased m-0 p-0 overflow-x-hidden">
+
+    <section id="section1" class="scroll-section flex flex-col justify-between items-center px-6 py-12 bg-sky-950 h-screen w-full relative overflow-hidden">
+        <div class="max-w-3xl text-center z-10 pt-4 flex-none">
+            <h1 class="text-3xl md:text-5xl font-extrabold mb-2 leading-tight text-white drop-shadow-md">當豐水之鄉面臨極端氣候</h1>
+            <p class="text-base md:text-lg text-slate-200 leading-relaxed max-w-full mx-auto md:whitespace-nowrap text-center opacity-90 px-4">
+                在全球氣候變遷引發的極端天氣成為常態的情況下，台灣地區頻繁遭遇嚴重乾旱與短歷時強降雨。
+            </p>
+        </div>
+
+        <div class="relative z-10 flex flex-col items-center justify-center w-full flex-1 gap-6 my-4 min-h-0">
+            <div class="w-80 h-80 border-4 border-white/20 bg-slate-900/40 backdrop-blur-xs relative overflow-hidden shadow-[0_0_80px_rgba(56,189,248,0.25)] transition-shadow duration-500 hover:shadow-[0_0_100px_rgba(56,189,248,0.35)] flex-none"
+                 style="clip-path: path('M 160 0 C 160 0, 320 120, 320 220 A 160 100 0 0 1 0 220 C 0 120, 160 0, 160 0 Z'); transform: translateZ(0);">
+                <div class="w-full h-full absolute inset-0 flex flex-col items-center justify-center">
+                    <div id="water-container" class="absolute left-0 right-0 bottom-0 bg-sky-400/80 origin-bottom transition-all duration-300" style="height: 100%;">
+                        <div id="water-wave" class="absolute -top-5 left-0 w-[200%] h-7 bg-sky-300/50 rounded-[42%_45%_42%_42%] shadow-[0_0_15px_rgba(56,189,248,0.4)]"></div>
+                        <div class="absolute inset-0 bg-gradient-to-t from-sky-600/10 to-white/10 opacity-30"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="absolute w-[95%] max-w-[540px] bg-slate-950/70 backdrop-blur-xl border border-white/15 rounded-3xl p-6 text-center shadow-[0_20px_70px_rgba(0,0,0,0.6)] flex-none">
+                <h5 class="text-xl font-extrabold text-white mt-1 mb-2 tracking-tight">地下水枯，屏東不哭！</h5>
+                <p class="text-[14px] md:text-[15px] text-slate-100 opacity-95 leading-relaxed m-0 font-medium px-1">
+                    過去，屏東高度依賴單一地下水源，習慣「各戶鑿井、點狀抽水」。但在極端大旱時，淺層地下水位急速下降，傳統供水結構顯得極度脆弱。急需建立兼具耐災力優調度效益的「韌性供水系統」，成為保障民生安全的關鍵課題。
+                </p>
+            </div>
+        </div>
+
+        <div class="animate-bounce text-sm md:text-xl font-bold text-slate-300 text-center max-w-full mx-auto z-10 whitespace-normal px-4 opacity-80 leading-snug flex-none">
+            氣候變遷下之水資源調配與韌性供水－以提升屏東地區自來水普及率規劃為例
+        </div>
+    </section>
+
+    <section id="section2" class="scroll-section bg-slate-950 p-6 md:p-8 h-dvh flex flex-col gap-6 max-w-7xl mx-auto border-b border-white/5">
+        <div class="flex-none">
+            <h3 class="text-lg font-bold text-sky-400 flex items-center gap-2">
+                <span class="w-2.5 h-6 bg-sky-500 rounded-full inline-block"></span>
+                無自來水地區供水改善計畫 - 歷年改善成果與綜合走勢
+            </h3>
+        </div>
+
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 flex-none">
+            <div class="bg-slate-900/60 p-5 rounded-xl border border-slate-800 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
+                <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">歷年辦理件數</p>
+                <p class="text-2xl font-bold text-slate-100 mt-2">4,561 <span class="text-sm font-normal text-slate-400">件</span></p>
+            </div>
+            <div class="bg-slate-900/60 p-5 rounded-xl border border-slate-800 border-t-4 border-t-sky-500 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
+                <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">專案預算總數</p>
+                <p class="text-2xl font-bold text-sky-400 mt-2">227.3 <span class="text-sm font-normal text-slate-400">億元</span></p>
+            </div>
+            <div class="bg-slate-900/60 p-5 rounded-xl border border-slate-800 border-t-4 border-t-amber-500 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
+                <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">計畫受益總戶數</p>
+                <p class="text-2xl font-bold text-amber-400 mt-2">285,917 <span class="text-sm font-normal text-slate-400">戶</span></p>
+            </div>
+            <div class="bg-slate-900/60 p-5 rounded-xl border border-slate-800 border-t-4 border-t-emerald-500 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
+                <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">實際接水戶數</p>
+                <p class="text-2xl font-bold text-emerald-400 mt-2">224,728 <span class="text-sm font-normal text-slate-400">戶</span></p>
+            </div>
+        </div>
+
+        <div class="relative w-full flex-1 min-h-0 pb-2">
+            <canvas id="combinedChart"></canvas>
+        </div>
+    </section>
+
+    <section id="section3" class="section-block w-full h-screen bg-slate-900 relative overflow-hidden">
+        <div id="text-wrapper" class="absolute left-0 top-0 w-full md:w-1/2 h-[45vh] md:h-full px-8 md:px-16 flex items-center justify-center z-20 pointer-events-none">
+            <div class="relative w-full max-w-xl">
+                <div id="step1-text" class="absolute w-full flex flex-col justify-center">
+                    <h2 class="text-3xl font-bold mt-4 mb-4 text-blue-300">追趕全國的自來水普及率</h2>
+                    <p class="text-slate-300 leading-relaxed text-lg pointer-events-auto">
+                        早期屏東居民習慣自行抽取地下水，裝設自來水意願普遍偏低。導致普及率在民國105年底時僅有 <span class="text-amber-400 font-bold text-2xl">49.39%</span>，嚴重落後全台。
+                    </p>
+                </div>
+                
+                <div id="step2-text" class="absolute w-full flex flex-col justify-center opacity-0 pointer-events-none">
+                    <h3 class="text-2xl font-bold mb-3 text-emerald-400">大計畫啟動：突破70%</h3>
+                    <p class="text-slate-300 leading-relaxed text-lg pointer-events-auto">
+                        至114年底普及率已提升至 <span class="text-emerald-400 font-bold text-2xl">73.25%</span>，但與全台平均仍有21.76%的差距。這種在氣候變遷下顯得極度脆弱的供水結構，成為城鄉基礎建設差距中最亟待改善的一環。
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div id="map-wrapper" class="absolute bg-slate-950 border-t md:border-t-0 md:border-l border-white/5 z-10 flex flex-col justify-center items-center overflow-hidden">
+            <div id="geo-map-container" class="w-full h-full flex justify-center items-center relative">
+                <div id="counter-wrapper" class="absolute top-6 text-center transition-all duration-300 z-50 mt-8">
+                    <div class="text-sm text-slate-400 tracking-wider">屏東自來水普及率</div>
+                    <div id="counter-display" class="text-5xl font-black text-blue-400 mt-1">49.39%</div>
+                </div>
+                <div id="pingtung-card" class="absolute bottom-6 left-6 right-6 md:left-auto md:right-8 md:bottom-8 md:w-120 bg-slate-900/95 border border-orange-500/30 p-4 rounded-xl shadow-2xl backdrop-blur-md opacity-0 translate-y-4 pointer-events-none transition-all duration-300 z-30">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="w-3 h-3 bg-orange-400 rounded-full animate-[ping_2s_linear_infinite]"></span>
+                        <h4 class="text-2xl font-bold text-orange-400 tracking-wide uppercase">屏東系統</h4>
+                    </div>
+                    <div class="text-xl font-bold text-white">開鑿深層地下水井，抽取過濾之深層地下水</div>
+                    <p class="text-xl text-gray-400 mt-0.5 leading-normal">各鄉鎮間早期多屬獨立運作之地區性小系統，管網聯通能力較弱，淨水設施主要以基礎的加氯消毒及沉澱為主，在面對突發性水質變異時調度彈性較受限。</p>
+                </div>
+                <div id="botan-card" class="absolute mt-6 left-6 right-6 md:right-auto md:left-10 md:mt-6 md:w-120 bg-slate-900/95 border border-emerald-500/30 p-4 rounded-xl shadow-2xl backdrop-blur-md opacity-0 translate-y-4 pointer-events-none transition-all duration-300 z-30">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="w-3 h-3 bg-emerald-400 rounded-full animate-[ping_2s_linear_infinite]"></span>
+                        <h4 class="text-2xl font-bold text-emerald-400 tracking-wide uppercase">牡丹系統</h4>
+                    </div>
+                    <div class="text-xl font-bold text-white">引牡丹水庫水源，經牡丹淨水場處理供水</div>
+                    <p class="text-xl text-gray-400 mt-0.5 leading-normal">沿線地形高低起伏劇烈，且中途缺乏大型加壓與配水池調蓄，加上每逢連續假期恆春半島觀光人口暴增，引發瞬間用水量激增，整體管網末端調配之穩定性面臨嚴峻挑戰。</p>
+                </div>
+                <div id="map-legend" class="absolute flex gap-6 left-10 bottom-6 text-xs font-mono bg-slate-900/80 px-4 py-2 rounded-full border border-white/5 z-50">
+                    <span class="flex items-center gap-2"><span class="w-3 h-3 bg-orange-500 rounded-full inline-block animate-pulse"></span> 屏東系統</span>
+                    <span class="flex items-center gap-2"><span class="w-3 h-3 bg-emerald-500 rounded-full inline-block animate-pulse"></span> 牡丹系統</span>
+                </div>
+            </div>
+        </div>
+    </section>
+    <section id="section3_discuss" class="section-block w-full min-h-screen flex flex-col justify-center border-b border-slate-800 p-4 md:p-8">
+        <div class="w-full max-w-5xl mx-auto flex flex-col justify-between min-h-[85vh]">
+            <div class="w-full bg-slate-900 border border-slate-800 rounded-xl p-4 pt-8 pl-10 mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 anim-item an">
+                <div class="flex items-center space-x-3">
+                    <div class="w-3 h-3 rounded-full bg-red-500 animate-ping"></div>
+                    <div>
+                        <h1 class="text-lg font-bold text-slate-200 tracking-wide">問題二：偏遠、高地或弱勢聚落供水困難</h1>
+                        <p class="text-xs text-slate-400">PAGE_01 // 系統輸入端：現況與極端氣候風險評估</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2 text-xs font-mono bg-slate-950 px-3 py-1.5 rounded border border-red-900/30">
+                    <span class="text-red-500 font-bold">STATE:</span>
+                    <span class="text-red-400">CRITICAL_ALERT</span>
+                </div>
+            </div>
+
+            <div class="my-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+                <div class="lg:col-span-7 bg-slate-900/60 border border-orange-500/30 rounded-xl p-6 shadow-2xl relative">
+                    <div class="absolute top-0 right-0 mt-3 mr-4 text-xs font-mono text-orange-500/50">INPUT_STAGE</div>
+                    <div class="flex items-center space-x-3 text-xl font-bold text-orange-500 mb-5">
+                        <i class="fa-solid fa-triangle-exclamation text-2xl"></i>
+                        <h2>(一) 問題分析</h2>
+                    </div>
+                    <div class="bg-orange-500/5 border border-orange-500/20 rounded-lg p-4 mb-4">
+                        <div class="text-xs text-orange-400 font-semibold mb-1 tracking-wide">地理與人口結構困境</div>
+                        <p class="text-sm text-slate-300 leading-relaxed">
+                            屏東部分原住民山地鄉、偏遠散村或地勢較高之聚落，因<span class="text-orange-400 font-semibold">地理位置極度孤立、戶數稀少且分散</span>。若要將既有的自來水主幹管跨越山巒或溪流延伸至該區域，每戶平均分攤之工程成本往往高達數十萬甚至上百萬元。
+                        </p>
+                    </div>
+                    <div class="bg-slate-950 p-4 rounded-xl border border-red-900/40 flex flex-col justify-between">
+                        <div class="flex items-center space-x-2 text-red-400 font-bold text-sm mb-2">
+                            <i class="fa-solid fa-burst"></i>
+                            <h3>基礎建設死角與生存危機</h3>
+                        </div>
+                        <p class="text-xs text-slate-400 leading-relaxed">
+                            這導致 these 偏遠或弱勢區域成為基礎建設遺漏的死角，遠遠超出常規延管工程所設定之評估補助上限（每戶補助標準）。在極端旱災來臨時，其自行架設之山澗取水系統常率先斷水，面臨嚴峻的<span class="text-red-400 font-bold">民生生存危機</span>。
+                        </p>
+                    </div>
+                </div>
+                <div class="lg:col-span-5 bg-slate-900/40 border border-slate-800 rounded-xl p-4 flex flex-col justify-center items-center text-center">
+                    <div class="text-xs font-mono text-slate-500 mb-2">SCHEMATIC DIAGRAM REFERENCE</div>
+                    <div class="w-full bg-slate-950 p-4 rounded-lg border border-slate-800 flex flex-col justify-center items-center min-h-[180px]">
+                        <i class="fa-solid fa-map-marked-alt text-4xl text-slate-700 mb-3 animate-pulse"></i>
+                        <p class="text-xs text-slate-400 max-w-xs leading-normal">
+                            技術對照：請參考工程網絡分佈圖 <span class="text-cyan-400 font-mono">image_ba342c.png</span>，其呈現了自來水主幹管延伸、用戶外線與高山獨立簡易設施的空間關聯。
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="w-[80%] mx-auto bg-red-950/80 border-2 border-red-600 rounded-xl p-4 mt-6 flex flex-col sm:flex-row justify-between items-center text-sm glow-red anim-item an" style="transition-delay: 0.3s;">
+                <div class="flex items-center space-x-3 mb-2 sm:mb-0">
+                    <i class="fa-solid fa-radiation text-red-400 text-lg animate-spin" style="animation-duration: 3s;"></i>
+                    <span class="text-red-200 font-bold tracking-wide">現狀評估：地理孤立導致極端氣候適應力極低，亟需外部系統介入。</span>
+                </div>
+                <div class="font-mono text-xs text-red-400 bg-red-900/50 px-2.5 py-1 rounded border border-red-700">
+                    CRITICAL_SYSTEM_INPUT_01
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="section4" class="section-block fullscreen-section rounded-xl overflow-hidden border border-slate-800">
+        <header>
+            <h1>供水系統與自來水工程架構示意圖</h1>
+        </header>
+
+        <div class="main-diagram-container">
+            <svg class="main-diagram" viewBox="0 0 1000 420" xmlns="http://www.w3.org/2000/svg">
+                <path d="M 50 20 L 480 20 L 480 220 L 400 220 L 400 400 L 150 400 L 150 260 L 50 260 Z" fill="#66bb6a" rx="15" opacity="0.95"/>
+                <path d="M 520 50 L 850 50 L 850 400 L 420 400 L 420 240 L 520 240 Z" fill="#7cb342" rx="15" opacity="0.95"/>
+
+                <polygon points="650,50 720,10 790,50" fill="#388e3c" />
+                <polygon points="720,50 780,15 840,50" fill="#2e7d32" />
+                
+                <path d="M 730 35 Q 720 90 700 120 L 420 120 L 420 240 L 400 240 L 400 140 L 680 140 Q 700 120 710 35 Z" fill="#29b6f6" />
+                <path d="M 710 130 L 710 200 L 420 200" stroke="#29b6f6" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.7"/>
+
+                <rect x="430" y="55" width="90" height="35" fill="#ffe082" rx="4"/>
+                <rect x="450" y="42" width="15" height="15" fill="#bcaaa4" />
+                <rect x="280" y="65" width="120" height="35" fill="#b0bec5" rx="4"/>
+                <rect x="290" y="70" width="100" height="20" fill="#4fc3f7" />
+                <rect x="740" y="60" width="80" height="40" fill="#4e342e" rx="3"/>
+                <rect x="650" y="70" width="35" height="45" fill="#00838f" rx="6"/>
+                <circle cx="667" cy="65" r="6" fill="#b71c1c"/>
+
+                <rect x="200" y="30" width="40" height="65" fill="#ffffff" rx="3"/>
+                <rect x="208" y="38" width="8" height="8" fill="#b0bec5"/><rect x="224" y="38" width="8" height="8" fill="#b0bec5"/>
+                <rect x="208" y="52" width="8" height="8" fill="#b0bec5"/><rect x="224" y="52" width="8" height="8" fill="#b0bec5"/>
+                <rect x="208" y="66" width="8" height="8" fill="#b0bec5"/><rect x="224" y="66" width="8" height="8" fill="#b0bec5"/>
+                <rect x="320" y="110" width="50" height="55" fill="#ffffff" rx="3"/>
+                <rect x="328" y="118" width="34" height="6" fill="#ff8a80"/>
+                <rect x="328" y="130" width="34" height="6" fill="#ff8a80"/>
+                <rect x="328" y="142" width="34" height="6" fill="#ff8a80"/>
+                <g transform="translate(170, 160)"><polygon points="15,20 35,0 55,20" fill="#d84315"/><rect x="20" y="20" width="30" height="25" fill="#ffffff"/></g>
+                <g transform="translate(270, 200)"><polygon points="15,20 35,0 55,20" fill="#5d4037"/><rect x="20" y="20" width="30" height="25" fill="#ffffff"/></g>
+                <g transform="translate(480, 130)"><polygon points="15,15 30,0 45,15" fill="#d84315"/><rect x="20" y="15" width="25" height="20" fill="#ffffff"/></g>
+                <g transform="translate(650, 120)"><polygon points="15,15 30,0 45,15" fill="#5d4037"/><rect x="20" y="15" width="25" height="20" fill="#ffffff"/></g>
+                <g transform="translate(550, 190)"><polygon points="15,15 30,0 45,15" fill="#d84315"/><rect x="20" y="15" width="25" height="20" fill="#ffffff"/></g>
+                <g transform="translate(710, 190)"><polygon points="15,15 30,0 45,15" fill="#5d4037"/><rect x="20" y="15" width="25" height="20" fill="#ffffff"/></g>
+
+                <line x1="100" y1="90" x2="280" y2="90" stroke="#78909c" stroke-width="6" />
+                <line x1="400" y1="90" x2="440" y2="90" stroke="#78909c" stroke-width="6" />
+                <path d="M 220 90 L 220 140 L 195 140 L 195 180" stroke="#81c784" stroke-width="2.5" fill="none"/>
+                <path d="M 220 140 L 290 140 L 290 220" stroke="#81c784" stroke-width="2.5" fill="none"/>
+                <path d="M 780 100 L 780 160 L 550 160 L 550 205" stroke="#aed581" stroke-width="3" fill="none"/>
+                <path d="M 700 160 L 700 135" stroke="#aed581" stroke-width="3" fill="none"/>
+                <path d="M 600 160 L 600 220 L 610 220" stroke="#aed581" stroke-width="3" fill="none"/>
+                <path d="M 780 160 L 795 160 L 795 220" stroke="#aed581" stroke-width="3" fill="none"/>
+
+                <polyline points="220,90 235,185 130,290" stroke="#000" stroke-width="2.5" stroke-dasharray="6,6" fill="none" />
+                <circle cx="220" cy="90" r="4" fill="#000" />
+                
+                <path d="M 255 240 L 350 240 L 440 330" stroke="#000" stroke-width="2.5" stroke-dasharray="6,6" fill="none"/>
+                <circle cx="255" cy="240" r="4" fill="#000" />
+                
+                <line x1="780" y1="100" x2="850" y2="330" stroke="#000" stroke-width="2.5" stroke-dasharray="6,6" />
+                <circle cx="780" cy="100" r="4" fill="#000" />
+            </svg>
+        </div>
+
+        <div class="features-container">
+            <div class="feature-card">
+                <div class="card-svg-wrapper">
+                    <svg viewBox="0 0 400 100" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="400" height="100" fill="#1f242c"/>
+                        <polygon points="0,75 400,50 400,100 0,100" fill="#2e7d32" opacity="0.7"/>
+                        <rect x="30" y="30" width="40" height="40" fill="#37474f"/>
+                        <path d="M 0,80 L 250,55 L 400,65" stroke="#b0bec5" stroke-width="8" fill="none"/>
+                    </svg>
+                </div>
+                <div class="card-info">
+                    <div class="card-title title-blue">自來水延管工程</div>
+                    <div class="card-desc">佈建與延伸自來水核心主幹管道，擴大供水系統覆蓋面。</div>
+                </div>
+            </div>
+
+            <div class="feature-card">
+                <div class="card-svg-wrapper">
+                    <svg viewBox="0 0 400 100" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="400" height="100" fill="#1f242c"/>
+                        <polygon points="0,60 400,60 400,100 0,100" fill="#558b2f" />
+                        <line x1="-10" y1="30" x2="410" y2="40" stroke="#455a64" stroke-width="12" />
+                        <rect x="140" y="60" width="30" height="25" fill="#ffffff"/>
+                        <path d="M 240,35 L 170,60" stroke="#ffeb3b" stroke-width="3" fill="none" stroke-dasharray="4,2"/>
+                    </svg>
+                </div>
+                <div class="card-info">
+                    <div class="card-title title-red">自來水用戶設備外線</div>
+                    <div class="card-desc">接駁主幹管至終端住宅外部管線，打通供水最後一哩路。</div>
+                </div>
+            </div>
+
+            <div class="feature-card">
+                <div class="card-svg-wrapper">
+                    <svg viewBox="0 0 400 100" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="400" height="100" fill="#1f242c"/>
+                        <rect x="50" y="30" width="80" height="50" fill="#263238" rx="3"/>
+                        <line x1="60" y1="45" x2="120" y2="45" stroke="#37474f" stroke-width="2"/>
+                        <line x1="60" y1="60" x2="120" y2="60" stroke="#37474f" stroke-width="2"/>
+                        <circle cx="200" cy="55" r="10" fill="#006064"/>
+                        <path d="M 130,55 L 290,55" stroke="#00838f" stroke-width="4" fill="none"/>
+                    </svg>
+                </div>
+                <div class="card-info">
+                    <div class="card-title title-orange">簡易水工程及系統營運</div>
+                    <div class="card-desc">偏遠山區簡易集水蓄水設施布建與後續智慧化營運維護。</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="section3_file4" class="section-block w-full min-h-screen flex flex-col justify-center border-b border-slate-800 p-4 md:p-8 pt-8">
+        <div class="w-full max-w-5xl mx-auto flex flex-col justify-between min-h-[85vh]">
+            <div class="w-full bg-slate-900 border border-slate-800 rounded-xl p-4 pt-8 pl-10 mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 anim-item an">
+                <div class="flex items-center space-x-3">
+                    <div class="w-3 h-3 rounded-full bg-red-500 animate-ping"></div>
+                    <div>
+                        <h1 class="text-lg font-bold text-slate-200 tracking-wide">問題三：屏北及屏中地區供水不穩定與環境調適風險</h1>
+                        <p class="text-xs text-slate-400">PAGE_01 // 系統輸入端：單一水源過度依賴與氣候風險評估</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2 text-xs font-mono bg-slate-950 px-3 py-1.5 rounded border border-red-900/30">
+                    <span class="text-red-500 font-bold">STATE:</span>
+                    <span class="text-red-400">RISK_ALERT</span>
+                </div>
+            </div>
+
+            <div class="my-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+                <div class="lg:col-span-7 bg-slate-900/60 border border-orange-500/30 rounded-xl p-6 shadow-2xl relative">
+                    <div class="absolute top-0 right-0 mt-3 mr-4 text-xs font-mono text-orange-500/50">INPUT_STAGE</div>
+                    
+                    <div class="flex items-center space-x-3 text-xl font-bold text-orange-500 mb-5">
+                        <i class="fa-solid fa-triangle-exclamation text-2xl"></i>
+                        <h2>(一) 問題分析</h2>
+                    </div>
+                    
+                    <div class="bg-orange-500/5 border border-orange-500/20 rounded-lg p-4 mb-4">
+                        <div class="text-xs text-orange-400 font-semibold mb-1 tracking-wide">水源結構與供應樽頸</div>
+                        <p class="text-sm text-slate-300 leading-relaxed">
+                            屏北及屏中地區<span class="text-orange-400 font-semibold">過度依賴單一深井水源</span>。隨著自來水普及率的穩定提高，整體用水需求量隨之增長，導致現有的單一水源供應壓力日益沉重，系統容錯空間逐步被壓縮。
+                        </p>
+                    </div>
+
+                    <div class="bg-slate-950 p-4 rounded-xl border border-red-900/40 flex flex-col justify-between">
+                        <div class="flex items-center space-x-2 text-red-400 font-bold text-sm mb-2">
+                            <i class="fa-solid fa-burst"></i>
+                            <h3>氣候衝擊與環境調適風險</h3>
+                        </div>
+                        <p class="text-xs text-slate-400 leading-relaxed">
+                            在極端氣候常態化（如遭遇長期乾旱）的威脅下，現有供水系統的環境調適風險顯著上升，極易面臨供水不穩定的窘境。為了有效支撐未來的民生與產業需求，<span class="text-red-400 font-bold">亟需開發多元新水源</span>以強化防禦韌性。
+                        </p>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-5 bg-slate-900/40 border border-slate-800 rounded-xl p-4 flex flex-col justify-center items-center text-center">
+                    <div class="text-xs font-mono text-slate-500 mb-2">SCHEMATIC DIAGRAM REFERENCE</div>
+                    <div class="w-full bg-slate-950 p-4 rounded-lg border border-slate-800 flex flex-col justify-center items-center min-h-[180px]">
+                        <i class="fa-solid fa-droplet-slash text-4xl text-slate-700 mb-3 animate-pulse"></i>
+                        <p class="text-xs text-slate-400 max-w-xs leading-normal">
+                            技術對照：請參考地下水源與供水網分佈圖 <span class="text-cyan-400 font-mono">image_water_risk.png</span>，其呈現了深井水源單一化分佈與極端旱災下的水壓影響範圍。
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="w-[80%] mx-auto bg-red-950/80 border-2 border-red-600 rounded-xl p-4 mt-6 flex flex-col sm:flex-row justify-between items-center text-sm glow-red anim-item an" style="transition-delay: 0.3s;">
+                <div class="flex items-center space-x-3 mb-2 sm:mb-0">
+                    <i class="fa-solid fa-cloud-sun-rain text-red-400 text-lg animate-spin" style="animation-duration: 4s;"></i>
+                    <span class="text-red-200 font-bold tracking-wide">現狀評估：單一地下水源環境適應力不足，應加速推動多元水源雙軌備援機制。</span>
+                </div>
+                <div class="font-mono text-xs text-red-400 bg-red-900/50 px-2.5 py-1 rounded border border-red-700">
+                    CRITICAL_SYSTEM_INPUT_02
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="theaterSection" class="section-block relative w-full h-screen px-[2vw] py-[2vh] flex flex-col justify-between overflow-hidden bg-gradient-to-br from-[#0b1528] to-[#050a14]">
+        <header class="text-center border-b border-blue-900/40 pb-2 h-[6vh] mt-8">
+            <h1 class="text-[1.6rem] font-bold tracking-widest bg-gradient-to-r from-sky-400 to-indigo-400 bg-clip-text text-transparent">
+                屏東平原自來水供水系統架構圖
+            </h1>
+        </header>
+
+        <div class="grid grid-cols-[1fr_auto] w-full h-[88vh] mt-[1vh] relative gap-0">
+            <div id="diagramContainer" class="bg-slate-900/20 border border-blue-900/50 rounded-2xl p-8 flex items-center justify-center overflow-hidden h-full">
+                <svg id="mainSvg" class="w-full h-full object-contain" viewBox="0 0 920 500" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="pipeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stop-color="#0284c7" />
+                            <stop offset="50%" stop-color="#38bdf8" />
+                            <stop offset="100%" stop-color="#0284c7" />
+                        </linearGradient>
+                        <linearGradient id="landGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#142818" />
+                            <stop offset="100%" stop-color="#1e3d24" />
+                        </linearGradient>
+                        <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" 
+                                markerWidth="4" markerHeight="4" orient="auto-start-reverse">
+                            <path d="M 0 2 L 8 5 L 0 8 z" fill="#ffffff" />
+                        </marker>
+                    </defs>
+
+                    <g id="mapLayer" opacity="0.6"></g>
+                    
+                    <text x="180" y="90" fill="#4ade80" font-size="20" font-weight="bold" opacity="0.3" letter-spacing="4">屏東平原</text>
+
+                    <g transform="translate(100, 110)"><circle cx="0" cy="0" r="18" fill="#1e293b" stroke="#334155"/><rect x="-14" y="-28" width="28" height="12" fill="#0369a1" rx="2"/><text x="0" y="-19" fill="#fff" font-size="8" text-anchor="middle">九如</text></g>
+                    <g transform="translate(190, 190)"><circle cx="0" cy="0" r="18" fill="#1e293b" stroke="#334155"/><rect x="-14" y="-28" width="28" height="12" fill="#0369a1" rx="2"/><text x="0" y="-19" fill="#fff" font-size="8" text-anchor="middle">內埔</text></g>
+                    <g transform="translate(150, 270)"><circle cx="0" cy="0" r="18" fill="#1e293b" stroke="#334155"/><rect x="-14" y="-28" width="28" height="12" fill="#0369a1" rx="2"/><text x="0" y="-19" fill="#fff" font-size="8" text-anchor="middle">麟洛</text></g>
+                    <g transform="translate(200, 340)"><circle cx="0" cy="0" r="18" fill="#1e293b" stroke="#334155"/><rect x="-14" y="-28" width="28" height="12" fill="#0369a1" rx="2"/><text x="0" y="-19" fill="#fff" font-size="8" text-anchor="middle">萬巒</text></g>
+
+                    <path d="M 118,110 L 250,110 L 250,220 L 330,220" fill="none" stroke="url(#pipeGrad)" stroke-width="6" marker-end="url(#arrow)" />
+                    <path d="M 150,270 L 190,270 L 190,190 L 250,190" fill="none" stroke="url(#pipeGrad)" stroke-width="6" />
+                    <path d="M 248,380 L 285,380 L 285,220 L 330,220" fill="none" stroke="url(#pipeGrad)" stroke-width="6" marker-end="url(#arrow)" />
+                    <path d="M 208,220 L 330,220" fill="none" stroke="url(#pipeGrad)" stroke-width="8" marker-end="url(#arrow)" />
+                    
+                    <g transform="translate(330, 165)">
+                        <rect x="0" y="0" width="130" height="110" fill="#1e293b" rx="6" stroke="#38bdf8" stroke-width="1.5"/>
+                        <rect x="10" y="15" width="35" height="35" fill="#0284c7" rx="2" opacity="0.6"/>
+                        <rect x="55" y="15" width="35" height="35" fill="#0284c7" rx="2" opacity="0.6"/>
+                        <rect x="100" y="15" width="20" height="80" fill="#475569" rx="2"/>
+                        <rect x="10" y="65" width="35" height="30" fill="#0284c7" rx="2" opacity="0.6"/>
+                        <rect x="55" y="65" width="35" height="30" fill="#0284c7" rx="2" opacity="0.6"/>
+                        <text x="65" y="-20" fill="#ffffff" font-size="13" font-weight="bold" text-anchor="middle">淨水處理廠</text>
+                    </g>
+
+                    <path d="M 460,220 L 500,220.1" fill="none" stroke="url(#pipeGrad)" stroke-width="8" marker-end="url(#arrow)"/>
+
+                    <g transform="translate(500, 170)">
+                        <ellipse cx="35" cy="15" rx="35" ry="12" fill="#0284c7" stroke="#38bdf8" stroke-width="1.5"/>
+                        <path d="M 0,15 L 0,70 A 35,12 0 0,0 70,70 L 70,15 Z" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+                        <ellipse cx="35" cy="17" rx="31" ry="10" fill="#0ea5e9"/>
+                        <text x="35" y="-25" fill="#ffffff" font-size="13" font-weight="bold" text-anchor="middle">配水池</text>
+                    </g>
+
+                    <path d="M 570,220 L 610,220.1" fill="none" stroke="url(#pipeGrad)" stroke-width="8" marker-end="url(#arrow)"/>
+
+                    <g transform="translate(610, 165)">
+                        <rect x="0" y="0" width="75" height="110" fill="#334155" rx="6" stroke="#38bdf8" stroke-width="1.5"/>
+                        <rect x="10" y="15" width="55" height="80" fill="#1e293b" rx="4"/>
+                        <circle cx="37" cy="45" r="10" fill="#0284c7"/>
+                        <circle cx="37" cy="75" r="10" fill="#0284c7"/>
+                        <text x="37" y="-20" fill="#ffffff" font-size="13" font-weight="bold" text-anchor="middle">加壓站</text>
+                    </g>
+
+                    <path d="M 685,220 L 725,220.1 L 725,100 L 760,100" fill="none" stroke="url(#pipeGrad)" stroke-width="8" marker-end="url(#arrow)"/>
+                    <path d="M 725,220 L 760,220.1" fill="none" stroke="url(#pipeGrad)" stroke-width="8" marker-end="url(#arrow)"/>
+                    <path d="M 725,220 L 725,320 L 760,320" fill="none" stroke="url(#pipeGrad)" stroke-width="8" marker-end="url(#arrow)"/>
+
+                    <g transform="translate(770, 70)">
+                        <rect x="0" y="0" width="140" height="280" fill="#0a1426" rx="8" stroke="#1e3a6a" opacity="0.9"/>
+                        <text x="70" y="30" fill="#22d3ee" font-size="13" font-weight="bold" text-anchor="middle">終端用戶群</text>
+                        <circle cx="30" cy="60" r="12" fill="#1e293b"/><text x="55" y="60" fill="#fff" font-size="11">住宅區</text>
+                        <circle cx="30" cy="120" r="12" fill="#1e293b"/><text x="55" y="120" fill="#fff" font-size="11">學校</text>
+                        <circle cx="30" cy="180" r="12" fill="#1e293b"/><text x="55" y="180" fill="#fff" font-size="11">醫院</text>
+                        <circle cx="30" cy="240" r="12" fill="#1e293b"/><text x="55" y="240" fill="#fff" font-size="11">公共設施</text>
+                    </g>
+                </svg>
+            </div>
+
+            <div id="cardsTheater" class="w-0 opacity-0 relative h-full flex items-center justify-center overflow-visible">
+                <div class="theater-card border-2 border-blue-800 rounded-2xl p-6">
+                    <div class="w-12 h-12 bg-sky-500/15 border border-sky-400 rounded-xl flex items-center justify-center text-xl text-sky-400 mb-4">
+                        <i class="fa-solid fa-bore-hole"></i>
+                    </div>
+                    <div class="text-xl font-bold mb-2">1. 深井取水</div>
+                    <div class="text-sm text-slate-400 leading-relaxed">開發地下水源，多點備援取水。分散配置於屏東平原各地。</div>
+                    <div class="mt-4 flex flex-col gap-2 bg-black/20 p-3 rounded-lg border border-white/5">
+                        <div class="text-xs flex items-center gap-2 text-slate-300"><i class="fa-solid fa-location-dot text-sky-400"></i> 九如 (深井取水)</div>
+                        <div class="text-xs flex items-center gap-2 text-slate-300"><i class="fa-solid fa-location-dot text-sky-400"></i> 內埔 (深井取水)</div>
+                        <div class="text-xs flex items-center gap-2 text-slate-300"><i class="fa-solid fa-location-dot text-sky-400"></i> 麟洛 (深井取水)</div>
+                        <div class="text-xs flex items-center gap-2 text-slate-300"><i class="fa-solid fa-location-dot text-sky-400"></i> 萬巒 (深井取水)</div>
+                    </div>
+                </div>
+
+                <div class="theater-card border-2 border-blue-800 rounded-2xl p-6">
+                    <div class="w-12 h-12 bg-sky-500/15 border border-sky-400 rounded-xl flex items-center justify-center text-xl text-sky-400 mb-4">
+                        <i class="fa-solid fa-seedling"></i>
+                    </div>
+                    <div class="text-xl font-bold mb-2">2. 淨水處理</div>
+                    <div class="text-sm text-slate-400 leading-relaxed">淨水處理廠導入先進處理技術，進行全面水質監測，確保供水水質安全。</div>
+                </div>
+
+                <div class="theater-card border-2 border-blue-800 rounded-2xl p-6">
+                    <div class="w-12 h-12 bg-sky-500/15 border border-sky-400 rounded-xl flex items-center justify-center text-xl text-sky-400 mb-4">
+                        <i class="fa-solid fa-database"></i>
+                    </div>
+                    <div class="text-xl font-bold mb-2">3. 配水池儲存</div>
+                    <div class="text-sm text-slate-400 leading-relaxed">大型儲水設施，發揮調節水量、穩定供水之關鍵效能。</div>
+                </div>
+
+                <div class="theater-card border-2 border-blue-800 rounded-2xl p-6">
+                    <div class="w-12 h-12 bg-sky-500/15 border border-sky-400 rounded-xl flex items-center justify-center text-xl text-sky-400 mb-4">
+                        <i class="fa-solid fa-bolt"></i>
+                    </div>
+                    <div class="text-xl font-bold mb-2">4. 加壓供水</div>
+                    <div class="text-sm text-slate-400 leading-relaxed">設置加壓站進行加壓輸送，穩定端點水壓，提升整體供水效能。</div>
+                </div>
+
+                <div class="theater-card border-2 border-blue-800 rounded-2xl p-6">
+                    <div class="w-12 h-12 bg-sky-500/15 border border-sky-400 rounded-xl flex items-center justify-center text-xl text-sky-400 mb-4">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                    <div class="text-xl font-bold mb-2">5. 民生用戶</div>
+                    <div class="text-sm text-slate-400 leading-relaxed">實現穩定供水，建構在地安心生活網。終端涵蓋多元化場域：</div>
+                    <div class="mt-4 flex flex-col gap-0.5 bg-black/20 p-3 rounded-lg border border-white/5">
+                        <div class="text-xs flex items-center gap-2 text-slate-300"><i class="fa-solid fa-house text-cyan-400"></i> 住宅區</div>
+                        <div class="text-xs flex items-center gap-2 text-slate-300"><i class="fa-solid fa-school text-cyan-400"></i> 學校</div>
+                        <div class="text-xs flex items-center gap-2 text-slate-300"><i class="fa-solid fa-hospital text-cyan-400"></i> 醫院</div>
+                        <div class="text-xs flex items-center gap-2 text-slate-300"><i class="fa-solid fa-building-flag text-cyan-400"></i> 公共設施</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <script>
+        // 註冊 GSAP 相關套件
+        gsap.registerPlugin(ScrollTrigger, TextPlugin);
+
+        // ==========================================
+        // 1. 檔案一：首頁波浪與基礎動態
+        // ==========================================
+        gsap.to("#water-wave", {
+            xPercent: -50,
+            duration: 3,
+            repeat: -1,
+            ease: "none"
+        });
+
+        const tl1 = gsap.timeline({
+            scrollTrigger: {
+                trigger: "#section1",
+                start: "top top",
+                end: "+=50%",
+                scrub: true,
+            }
+        });
+
+        tl1.to("#water-container", { height: "0%", ease: "none" }, 0)
+           .to("#section1", { backgroundColor: "#7f1d1d", ease: "none" }, 0);
+
+        // ==========================================
+        // 2. 檔案一：圖表初始化
+        // ==========================================
+        const timelineLabels = ['91-94', '95-98', '98-100', '101-105', '106-110', '111-113'];
+        const budgetData = [0.99, 1.23, 2.20, 3.99, 8.55, 5.78];
+        const actualData = [0.90, 1.21, 1.90, 3.69, 8.28, 5.53];
+        const beneficiaryData = [1.50, 1.26, 2.20, 5.00, 12.44, 6.20];
+        const connectedData = [0.40, 0.94, 1.79, 3.66, 9.48, 6.20];
+
+        Chart.defaults.color = '#94a3b8';
+        Chart.defaults.borderColor = '#334155';
+
+        new Chart(document.getElementById('combinedChart'), {
+            type: 'bar',
+            data: {
+                labels: timelineLabels,
+                datasets: [
+                    { label: '預算數 (十億元)', data: budgetData, backgroundColor: '#38bdf8', borderRadius: 4, yAxisID: 'y', order: 2 },
+                    { label: '決算數 (十億元)', data: actualData, backgroundColor: '#0d9488', borderRadius: 4, yAxisID: 'y', order: 2 },
+                    { label: '受益戶數 (萬戶)', data: beneficiaryData, type: 'line', borderColor: '#f97316', backgroundColor: '#f97316', tension: 0.3, borderWidth: 3, pointRadius: 5, yAxisID: 'y1', order: 1 },
+                    { label: '接水戶數 (萬戶)', data: connectedData, type: 'line', borderColor: '#10b981', backgroundColor: '#10b981', tension: 0.3, borderWidth: 3, pointRadius: 5, yAxisID: 'y1', order: 1 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, color: '#e2e8f0' } } },
+                scales: {
+                    y: { type: 'linear', position: 'left', beginAtZero: true, title: { display: true, text: '經費規模 (十億元)', color: '#38bdf8' }, grid: { color: '#1e293b' } },
+                    y1: { type: 'linear', position: 'right', beginAtZero: true, title: { display: true, text: '戶數成長 (萬戶)', color: '#10b981' }, grid: { drawOnChartArea: false } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+
+        // 檔案一底部（Section 2）解鎖阻尼緩衝
+        gsap.to("#section2", {
+            scrollTrigger: {
+                trigger: "#section2",
+                start: "top top",
+                end: "+=800",        
+                pin: true,
+                pinSpacing: true,
+                scrub: true,
+                refreshPriority: 10  
+            }
+        });
+
+        // ==========================================
+        // 3. 檔案二：地圖與運鏡控制核心
+        // ==========================================
+        const pingtungGeoJSON = {
+            "type": "FeatureCollection",
+            "features": [
+                { 
+                    "type": "Feature", 
+                    "properties": { "name": "屏東縣" }, 
+                    "geometry": { 
+                        "type": "Polygon", 
+                        "coordinates": [ [ 
+                            [ 120.470868879345872, 22.75071317336301 ], [ 120.631609002554541, 22.892665489962877 ], 
+                            [ 120.844537477454338, 22.863440013015843 ], [ 120.905075965416046, 22.771588514039461 ], 
+                            [ 120.806961864236726, 22.560747573207312 ], [ 120.811136932372008, 22.37078197305161 ], 
+                            [ 120.832012273048463, 22.278930474075228 ], [ 120.900900897280749, 22.233004724587037 ], 
+                            [ 120.888375692874888, 22.032601454093111 ], [ 120.867500352198434, 21.901086807831472 ], 
+                            [ 120.813224466439664, 21.913612012237341 ], [ 120.706760228989765, 21.919874614440278 ], 
+                            [ 120.706760228989765, 22.101490078325398 ], [ 120.612821195945727, 22.343644030172225 ], 
+                            [ 120.42, 22.45 ], [ 120.45, 22.7 ], [ 120.470868879345872, 22.75071317336301 ] 
+                        ] ] 
+                    } 
+                }
+            ]
+        };
+
+        const mapWidth = 240;
+        const mapHeight = 360;
+
+        const svg = d3.select("#geo-map-container")
+            .append("svg")
+            .attr("id", "visual-map")
+            .attr("width", "100%")
+            .attr("height", "100%")
+            .attr("viewBox", `0 0 ${mapWidth} ${mapHeight}`)
+            .attr("class", "overflow-hidden transition-all");
+
+        const projection = d3.geoMercator().fitSize([mapWidth, mapHeight], pingtungGeoJSON);
+        const pathGenerator = d3.geoPath().projection(projection);
+
+        svg.append("path")
+            .datum(pingtungGeoJSON.features[0])
+            .attr("d", pathGenerator)
+            .attr("fill", "#1e293b") 
+            .attr("stroke", "#475569")
+            .attr("stroke-width", 2)
+            .attr("id", "real-pingtung-map");
+
+        const sysPoints = [
+            { name: "屏東系統", lon: 120.5, lat: 22.6, color: "orange" },
+            { name: "牡丹系統", lon: 120.8, lat: 22, color: "#10b981" }
+        ];
+
+        svg.selectAll("circle.sys-node")
+            .data(sysPoints)
+            .join("circle")
+            .attr("class", "sys-node pulse-node")
+            .attr("cx", d => projection([d.lon, d.lat])[0])
+            .attr("cy", d => projection([d.lon, d.lat])[1])
+            .attr("r", 6) 
+            .attr("fill", d => d.color);
+
+        const isDesktop = window.innerWidth >= 768;
+
+        if (isDesktop) {
+            gsap.set("#map-wrapper", { left: "50%", width: "50%", height: "100%", top: 0, bottom: "auto" });
+            gsap.set("#visual-map", { width: 256, height: 384, backgroundColor: "rgba(30, 41, 59, 0.6)", borderRadius: 12, borderWidth: 1, borderColor: "#1e293b" });
+        } else {
+            gsap.set("#map-wrapper", { left: 0, width: "100%", height: "55vh", bottom: 0, top: "auto" });
+            gsap.set("#visual-map", { width: 224, height: 320, backgroundColor: "rgba(30, 41, 59, 0.6)", borderRadius: 12, borderWidth: 1, borderColor: "#1e293b" });
+        }
+
+        let counterObj = { value: 49.39 };
+        const tl = gsap.timeline({
+            scrollTrigger: {
+                trigger: "#section3",
+                start: "top top",      
+                end: "+=250%",  
+                pin: true,             
+                scrub: 1,
+                refreshPriority: 9
+            }
+        });
+
+        tl.to(counterObj, {
+            value: 73.25,
+            duration: 0.5, 
+            onUpdate: function() {
+                document.getElementById("counter-display").innerText = counterObj.value.toFixed(2) + "%";
+            }
+        }, 0)
+        .to("#real-pingtung-map", { attr: { fill: "#1e3a8a", stroke: "#60a5fa" }, duration: 0.5 }, 0)
+        .to("#step1-text", { opacity: 0, y: -20, duration: 0.2 }, 0.5); 
+
+        tl.to("#step2-text", {
+            opacity: 1,
+            y: 0,
+            duration: 0.3,
+            onStart: () => document.getElementById("step2-text").classList.remove("pointer-events-none"),
+            onReverseComplete: () => document.getElementById("step2-text").classList.add("pointer-events-none")
+        }, 0.7)
+        .to(".sys-node", { attr: { r: 10 }, stagger: 0.1, duration: 0.2 }, 0.8);
+
+        tl.to("#step2-text", { 
+            opacity: 0, y: -20, duration: 0.3, 
+            onStart: () => document.getElementById("step2-text").classList.add("pointer-events-none") 
+        }, 1.1)
+        .to("#counter-wrapper, #map-legend", { opacity: 0, y: -10, duration: 0.3 }, 1.1);
+
+        if (isDesktop) {
+            tl.to("#map-wrapper", { left: 0, width: "100%", duration: 0.6 }, 1.2);
+        } else {
+            tl.to("#map-wrapper", { height: "100vh", duration: 0.6 }, 1.2);
+        }
+
+        tl.to("#visual-map", { width: "100%", height: "100%", borderRadius: 0, borderWidth: 0, backgroundColor: "transparent", duration: 0.6 }, 1.2)
+        .to("#visual-map", { attr: { viewBox: "40 0 160 250" }, duration: 0.6 }, 1.2)
+        .to("#pingtung-card", {
+            opacity: 1, y: 0, duration: 0.4,
+            onStart: () => document.getElementById("pingtung-card").classList.remove("pointer-events-none"),
+            onReverseComplete: () => document.getElementById("pingtung-card").classList.add("pointer-events-none")
+        }, 1.6);
+
+        tl.to("#pingtung-card", {
+            opacity: 0, y: -20, duration: 0.3,
+            onStart: () => document.getElementById("pingtung-card").classList.add("pointer-events-none"),
+            onReverseComplete: () => document.getElementById("pingtung-card").classList.remove("pointer-events-none")
+        }, 2.5) 
+        .to("#visual-map", { attr: { viewBox: "80 180 120 180" }, duration: 0.6, ease: "power2.inOut" }, 2.5) 
+        .to("#botan-card", {
+            opacity: 1, y: 0, duration: 0.4,
+            onStart: () => document.getElementById("botan-card").classList.remove("pointer-events-none"),
+            onReverseComplete: () => document.getElementById("botan-card").classList.add("pointer-events-none")
+        }, 2.9);
+
+        // ==========================================
+        // 4. 問題討論區塊滾動控制心
+        // ==========================================
+        
+        // 問題二區塊底部緩衝
+        gsap.to("#section3_discuss", {
+            scrollTrigger: {
+                trigger: "#section3_discuss",
+                start: "top top",
+                end: "+=600",       
+                pin: true,
+                pinSpacing: true,
+                scrub: true,
+                refreshPriority: 4  
+            }
+        });
+
+        // 工程網絡大圖與三張精緻小卡登場（含解鎖緩衝）
+        const tlMain = gsap.timeline({
+            scrollTrigger: {
+                trigger: "#section4",
+                start: "top top",
+                end: "+=1500",      
+                pin: true,
+                pinSpacing: true,
+                scrub: 1,
+                refreshPriority: 3
+            }
+        });
+
+        tlMain.to("#section4 header", { opacity: 1, y: 0, duration: 1, ease: "power2.out" })
+              .to("#section4 .main-diagram-container", { opacity: 1, y: 0, duration: 1.5, ease: "power2.out" }, "-=0.3")
+              .to("#section4 .feature-card", { opacity: 1, y: 0, duration: 0.8, stagger: 0.6, ease: "power2.out" })
+              .to({}, { duration: 2 }); 
+
+        // 問題三區塊底部緩衝
+        gsap.to("#section3_file4", {
+            scrollTrigger: {
+                trigger: "#section3_file4",
+                start: "top top",
+                end: "+=600",       
+                pin: true,
+                pinSpacing: true,
+                scrub: true,
+                refreshPriority: 2
+            }
+        });
+
+        // ==========================================
+        // 5. 劇場滾動控制核心與地圖加載
+        // ==========================================
+        const jsonUrl = "https://raw.githubusercontent.com/joe123890508/Tap_Water_Game/main/pingtung.json";
+
+        d3.json(jsonUrl).then(function(geoData) {
+            const projection = d3.geoMercator()
+                .center([120.55, 22.55])
+                .scale(25000) 
+                .translate([100, 200]); 
+
+            const pathGenerator = d3.geoPath().projection(projection);
+
+            d3.select("#mapLayer")
+                .selectAll("path")
+                .data(geoData.features)
+                .enter()
+                .append("path")
+                .attr("d", pathGenerator)
+                .attr("fill", "url(#landGrad)")
+                .attr("stroke", "#2d5a36")
+                .attr("stroke-width", "1.5");
+            
+            initGsapTheater();
+        }).catch(function(error) {
+            console.error("地圖載入失敗: ", error);
+            initGsapTheater();
+        });
+
+        function initGsapTheater() {
+            const cards = gsap.utils.toArray(".theater-card");
+            
+            const pinTimeline = gsap.timeline({
+                scrollTrigger: {
+                    trigger: "#theaterSection",
+                    start: "top top",      
+                    end: "+=6200",         
+                    pin: true,             
+                    scrub: 1,              
+                    anticipatePin: 1,
+                    refreshPriority: 1
+                }
+            });
+
+            cards.forEach((card, index) => {
+                if (index === 0) {
+                    pinTimeline.to("#cardsTheater", {
+                        width: "440px",         
+                        opacity: 1,             
+                        paddingLeft: "2rem",    
+                        duration: 1.2,
+                        ease: "power2.inOut"
+                    }, "start");
+
+                    pinTimeline.to("#diagramContainer", {
+                        padding: "1rem",        
+                        duration: 1.2,
+                        ease: "power2.inOut"
+                    }, "start");
+                }
+
+                pinTimeline.set(card, { autoAlpha: 1, visibility: "visible" });
+
+                pinTimeline.to(card, {
+                    y: "0%",
+                    opacity: 1,
+                    duration: 1.2,
+                    ease: "power2.out"
+                });
+
+                pinTimeline.to({}, { duration: 1.5 });
+
+                if (index < cards.length - 1) {
+                    pinTimeline.to(card, {
+                        y: "-120vh",
+                        opacity: 0,
+                        duration: 1.2,
+                        ease: "power2.in"
+                    });
+                }
+            });
+
+            pinTimeline.to({}, { duration: 3.5 }); 
+            
+            // 系統初始化全局刷新，保障連續 pin-spacer 的高度完美同步
+            ScrollTrigger.refresh();
+        }
+    </script>
+</body>
+</html>
