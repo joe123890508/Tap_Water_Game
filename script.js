@@ -10,6 +10,45 @@
  * 5. 觸控/指針端 (Pointer Events) 反應優化與 Vibration API 實體震動回饋
  */
 
+// BGM 撥放
+var tag = document.createElement('script'); // 載入 YouTube Iframe API
+tag.src = "https://www.youtube.com/iframe_api";
+var firstScriptTag = document.getElementsByTagName('script')[0];
+firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+var player;
+function onYouTubeIframeAPIReady() {
+    player = new YT.Player('player', {
+        height: '0',
+        width: '0',
+        videoId: '410pjjdv76c', // 替換成 YouTube 影片 ID
+        playerVars: {
+            'autoplay': 0, // 先不自動播放，等點擊後再播
+            'controls': 0,
+            'disablekb': 1,
+            'fs': 0,
+            'modestbranding': 1,
+            'rel': 0,
+            'showinfo': 0
+        },
+        events: {
+            'onReady': onPlayerReady,
+            'onStateChange': onPlayerStateChange // 狀態改變的監聽事件
+        }
+    });
+}
+function onPlayerReady(event) {
+    const btn = document.getElementById('start-btn');
+    btn.addEventListener('click', () => {
+        player.setVolume(10); // 設定音量 (0-100)
+        player.playVideo();
+        });
+    }
+function onPlayerStateChange(event) {
+    // 當影片狀態變成 YT.PlayerState.ENDED (也就是結束時，數值通常是 0)
+    if (event.data === YT.PlayerState.ENDED) { player.playVideo(); } // 重新播放，達到無限循環效果
+    }
+
 // ==========================================================================
 // 1. 全域狀態與 Cookie 操作輔助函式
 // ==========================================================================
