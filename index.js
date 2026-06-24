@@ -17,37 +17,36 @@ var firstScriptTag = document.getElementsByTagName('script')[0];
 firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
 var player;
+
 function onYouTubeIframeAPIReady() {
     player = new YT.Player('player', {
         height: '0',
         width: '0',
-        videoId: '410pjjdv76c', // 替換成 YouTube 影片 ID
+        videoId: '410pjjdv76c', 
         playerVars: {
-            'autoplay': 0, // 先不自動播放，等點擊後再播
-            'controls': 0,
-            'disablekb': 1,
-            'fs': 0,
-            'modestbranding': 1,
-            'rel': 0,
-            'showinfo': 0
+            'autoplay': 0,       // 等待點擊後播放
+            'controls': 0,       // 隱藏控制項
+            'disablekb': 1,      // 停用鍵盤控制
+            'fs': 0,             // 停用全螢幕按鈕
+            'modestbranding': 1, // 隱藏 YouTube Logo
+            'loop': 1,           // 啟用循環播放
+            'playlist': '410pjjdv76c' // 必須重複填入影片 ID，循環才會生效
         },
         events: {
-            'onReady': onPlayerReady,
-            'onStateChange': onPlayerStateChange // 狀態改變的監聽事件
+            'onReady': onPlayerReady
         }
     });
 }
+
 function onPlayerReady(event) {
-    const btn = document.getElementById('start-btn');
+    const btn = document.getElementById('btn-start-game');
     btn.addEventListener('click', () => {
-        player.setVolume(10); // 設定音量 (0-100)
+    if (player && typeof player.setVolume === 'function') {
+        player.setVolume(10);
         player.playVideo();
-        });
     }
-function onPlayerStateChange(event) {
-    // 當影片狀態變成 YT.PlayerState.ENDED (也就是結束時，數值通常是 0)
-    if (event.data === YT.PlayerState.ENDED) { player.playVideo(); } // 重新播放，達到無限循環效果
-    }
+});
+}
 
 // ==========================================================================
 // 1. 全域狀態與 Cookie 操作輔助函式
