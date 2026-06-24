@@ -219,6 +219,7 @@
     </style>
 </head>
 <body class="bg-slate-950 text-slate-100 antialiased m-0 p-0 overflow-x-hidden">
+    <div id="player" style="display:none;"></div>
 
     <section id="section_bg_welcome" class="scroll-section flex flex-col justify-between items-center px-6 py-12 bg-sky-950 h-screen w-full relative overflow-hidden">
         <div class="max-w-3xl text-center z-10 pt-4 flex-none">
@@ -405,7 +406,7 @@
                     屏東縣雖然是台灣地區自來水普及率最低的縣市，但各個鄉鎮之間的差異卻非常懸殊，在最高的恆春鎮普及率竟然可以達到99.92%，大家可以先猜猜看普及率最低的是那個鄉鎮。
                 </p>
                 <p class="text-neutral-400 text-sm animate-bounce mt-6">
-                    v 繼續向下滾動滑鼠輪開始探索 v
+                    v 繼續向下滾動滑鼠開始探索 v
                 </p>
             </div>
 
@@ -877,7 +878,65 @@
         </div>
     </section>
 
+    <section id="section_final" class="scroll-section bg-slate-950 flex flex-col justify-center items-center py-24 px-6 relative overflow-hidden">
+        <div class="absolute inset-0 opacity-10 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:16px_1px] pointer-events-none"></div>
+        <div class="max-w-3xl text-center z-10 mb-12">
+            <span class="px-3 py-1 bg-teal-500/20 text-teal-400 rounded-full text-sm font-semibold">第五頁：未來永續願景</span>
+            <h2 class="text-4xl md:text-6xl font-black mt-4 mb-6 bg-gradient-to-r from-teal-400 to-blue-500 bg-clip-text text-transparent">
+                建構 90% 普及率的韌性水網
+            </h2>
+            <p class="text-slate-300 text-sm md:text-base leading-relaxed">
+                面對不可逆的氣候變遷，未來核心策略：開發天然過濾的<strong class="text-teal-400">伏流水</strong>、建置鄉鎮雙向<strong class="text-blue-400">區域聯通管網</strong>，並導入智慧水位監測，確保水資源永續。
+            </p>
+        </div>
+        <div class="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-2xl p-8 z-10 text-center shadow-2xl relative">
+            <div class="text-sm text-slate-400 mb-2">屏東自來水普及率終極目標</div>
+            <div id="final-counter" class="text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-cyan-400 drop-shadow-[0_0_15px_rgba(45,212,191,0.5)]">
+                73.25%
+            </div>
+            <div class="w-full bg-slate-950 h-5 rounded-full mt-6 p-1 border border-white/5 overflow-hidden">
+                <div id="final-progress-bar" class="h-full bg-gradient-to-r from-teal-500 via-cyan-500 to-blue-500 rounded-full" style="width: 73.25%;"></div>
+            </div>
+            <div class="flex justify-between text-xs text-slate-500 mt-2 font-mono">
+                <span>當前 73.25%</span>
+                <span class="text-teal-400 font-bold">目標 90.00%</span>
+            </div>
+        </div>
+    </section>
+
     <script>
+        var tag = document.createElement('script'); // 載入 YouTube Iframe API
+        tag.src = "https://www.youtube.com/iframe_api";
+        var firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+        var player;
+        function onYouTubeIframeAPIReady() {
+            player = new YT.Player('player', {
+                height: '0',
+                width: '0',
+                videoId: 'H_haJQ20B3A', 
+                playerVars: {
+                    'autoplay': 0,       // 等待點擊後播放
+                    'controls': 0,       // 隱藏控制項
+                    'disablekb': 1,      // 停用鍵盤控制
+                    'fs': 0,             // 停用全螢幕按鈕
+                    'modestbranding': 1, // 隱藏 YouTube Logo
+                    'loop': 1,           // 啟用循環播放
+                    'playlist': 'H_haJQ20B3A' // 必須重複填入影片 ID，循環才會生效
+                },
+                events: { 'onReady': onPlayerReady }
+            });
+        }
+        function onPlayerReady(event) {
+            // 監聽整個視窗的滾輪事件
+            window.addEventListener('wheel', () => {
+                if (player && typeof player.setVolume === 'function') {
+                    player.setVolume(10);
+                    player.playVideo();
+                }
+            }, { once: true }); // 代表這個事件只會觸發一次，避免每次滾動都重複執行 playVideo()
+        }
+
         gsap.registerPlugin(ScrollTrigger, TextPlugin);
 
         // 系統初次載入全域淡入
@@ -899,7 +958,7 @@
             scrollTrigger: {
                 trigger: "#section_bg_welcome",
                 start: "top top",
-                end: "+=50%",
+                end: "+=25%",
                 scrub: true,
             }
         });
@@ -1405,7 +1464,7 @@
                 scrollTrigger: {
                     trigger: "#theaterSection",
                     start: "top top",      
-                    end: "+=6200",         
+                    end: () => `+=${1000 + (cards.length * 900)}`,    
                     pin: true,             
                     scrub: 1,              
                     anticipatePin: 1,
@@ -1439,7 +1498,7 @@
                     ease: "power2.out"
                 });
 
-                pinTimeline.to({}, { duration: 1.5 });
+                pinTimeline.to({}, { duration: 0.6 });
 
                 if (index < cards.length - 1) {
                     pinTimeline.to(card, {
@@ -1451,7 +1510,7 @@
                 }
             });
 
-            pinTimeline.to({}, { duration: 3.5 }); 
+            pinTimeline.to({}, { duration: 1 }); 
             ScrollTrigger.refresh();
         }
     </script>
